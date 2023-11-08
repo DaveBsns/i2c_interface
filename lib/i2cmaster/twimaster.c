@@ -14,6 +14,7 @@
 
 
 /* define CPU frequency in hz here if not defined in Makefile */
+
 #ifndef F_CPU
 #define F_CPU 4000000UL
 #endif
@@ -27,16 +28,16 @@
 *************************************************************************/
 void i2c_init(void)
 {
-	printf("i2c_init function is executed\n");
-	/*
-	    DDRB |= (1<< DDB5);
+	//printf("i2c_init function is executed\n");
+	
+	DDRB |= (1<< DDB5);
     while(1){
-        _delay_ms(500);
+        _delay_ms(200);
         PORTB |= (1 << PORTB5);
-        _delay_ms(500);
+        _delay_ms(200);
         PORTB &= ~(1 << PORTB5);
     }
-	*/
+	
     
   
   /* initialize TWI clock: 100 kHz clock, TWPS = 0 => prescaler = 1 */
