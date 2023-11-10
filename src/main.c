@@ -45,8 +45,6 @@ ac1 = 408;
 ac4 = 32741;
 oversampling = 0;
 
-//#define i2c_read(ack) (ack) ? i2c_readAck() : i2c_readNak();
-
 lcd_initialized = false;
 
 void display_init(char addr) {
@@ -120,8 +118,6 @@ unsigned char i2c_start(unsigned char address)
                                                 // TWSTA = TWI Start Condition Bit
                                                 // TWEN = TWI Enable Bit
 
-    
-	
 	// wait until transmission completed
 	while(!(TWCR & (1<<TWINT)));
 
@@ -129,7 +125,6 @@ unsigned char i2c_start(unsigned char address)
 	twst = TW_STATUS & 0xF8;
 	if ( (twst != TW_START) && (twst != TW_REP_START)) return 1;
 
-    
 	// send device address
 	TWDR = address;
 	TWCR = (1<<TWINT) | (1<<TWEN);
@@ -137,17 +132,12 @@ unsigned char i2c_start(unsigned char address)
 	// wail until transmission completed and ACK/NACK has been received
 	while(!(TWCR & (1<<TWINT)));
 
-    
 	// check value of TWI Status Register. Mask prescaler bits.
 	twst = TW_STATUS & 0xF8;
-
     
 	if ( (twst != TW_MT_SLA_ACK) && (twst != TW_MR_SLA_ACK) ) return 1;
 
-    
-
 	return 0;
-
 }
 
 void blinki_blink(){
@@ -215,8 +205,6 @@ void i2c_start_wait(unsigned char address)
     	//if( twst != TW_MT_SLA_ACK) return 1;
     	break;
      }
-     
-
 }
 
 /*************************************************************************
@@ -299,86 +287,40 @@ int32_t computeB5(int32_t UT) {
   return X1 + X2;
 }
 
-/*
-int main(void) {
-    unsigned char MSB;
-    unsigned char LSB;
-    i2c_initialize();
-    i2c_start_wait(BMP180_ADDRESS_WRITE);
-    i2c_write(BMP180_CONTROL);
-    i2c_write(BMP180_READTEMPCMD);
-    i2c_stop();
-
-    i2c_start_wait(BMP180_ADDRESS_WRITE);
-    i2c_write(BMP180_TEMPDATA_ADRESS);
-    i2c_stop();
-
-    i2c_start_wait(BMP180_ADDRESS_READ);
-    i2c_write(BMP180_ADDRESS_READ);
-    MSB = i2c_readNak();
-    LSB = i2c_readNak();
-    i2c_stop();
-
-    // Assuming MSB and LSB are uint8_t variables representing the received bytes
-    uint16_t combinedValue = (uint16_t)MSB << 8 | LSB;
-
-
-
-    //i2c_start_wait(BMP180_TEMPDATA_ADRESS);
-    //i2c_rep_start(BMP180_TEMPDATA_ADRESS);
-    //ret = i2c_readNak();
-    //i2c_stop();
-    
-    for(;;){
-        _delay_ms(2000);
-        display_text(LCD_ADDRESS, MSB);
-        _delay_ms(2000);
-        display_text(LCD_ADDRESS, LSB);
-        _delay_ms(2000);
-        display_text(LCD_ADDRESS, combinedValue);
-    };
-
-    return 0;
-}
-*/
-
 
 int main(void) {
     unsigned char MSB;
     unsigned char LSB;
     uint16_t combinedValue;
-
-    i2c_initialize();
-
-
-        
-
+    
     for (;;) {
         // Start Temperature reading
-        i2c_start_wait(BMP180_ADDRESS_WRITE);
-        i2c_write(BMP180_CONTROL);
-        i2c_write(BMP180_READTEMPCMD);
-        i2c_stop();
+        i2c_initialize();                           // Oszilosneering comments
+        i2c_start_wait(BMP180_ADDRESS_WRITE);       // module adress 0x77 = 1110111 || + Write Bit (0) = 0xEE = 11101110 || + Acknowledge Bit (0) = 111011100
+        i2c_write(BMP180_CONTROL);                  // control register adress 0xF4 = 11110100 || + Acknowledge Bit (0) = 111101000              
+        i2c_write(BMP180_READTEMPCMD);              // Temperature Read Command Register 0x2E = 00101110 || + Acknowledge Bit (0) = 001011100       
+        i2c_stop();                                 // Stop Bit (1)
+        
 
         //Request Temperature value
-        i2c_start_wait(BMP180_ADDRESS_WRITE);
-        i2c_write(BMP180_TEMPDATA_ADRESS);
-        i2c_stop();
-
+        i2c_start_wait(BMP180_ADDRESS_WRITE);       // module adress 0x77 = 1110111 || + Write Bit (0) = 0xEE = 11101110 || + Acknowledge Bit (0) = 111011100
+        i2c_write(BMP180_TEMPDATA_ADRESS);          // Temperature Data Register 0xF6 = 11110110 || + Acknowledge Bit (0) = 111101100
+        i2c_stop();                                 // Stop Bit (1)
         //Read Temperature split into MSB and LSB
-        i2c_start_wait(BMP180_ADDRESS_READ);
-        MSB = i2c_readAck();
-        LSB = i2c_readNak();
-        i2c_stop();
-
+        i2c_start_wait(BMP180_ADDRESS_READ);        // module adress 0x77 = 1110111 || + Read Bit (1) = 0xEE = 11101111 || + Acknowledge Bit (0) = 111011100
+        MSB = i2c_readAck();                        // response || + Acknowledge Master (0)
+        LSB = i2c_readNak();                        // response || + Not Acknowledge Master (1)
+        i2c_stop();                                 // Stop Bit (1)
+        
         // Combine MSB and LSB into a 16-bit value
         combinedValue = (uint16_t)MSB << 8 | LSB;
         int32_t tempVal = computeB5(combinedValue);
-      
+        
         display_text(LCD_ADDRESS, tempVal);
         
         //Keep the display readable by limiting temp updates to every 200ms
-        _delay_ms(250);
+        _delay_ms(200);
+      
     }
 
     return 0;
