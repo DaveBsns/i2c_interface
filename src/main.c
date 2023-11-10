@@ -4,6 +4,7 @@
 // #include <lcd.h>
 #include <lib/hd44780pcf8574.h>
 #include <compat/twi.h>
+#include <stdbool.h>
 
 
 #define F_CPU 4000000UL
@@ -46,17 +47,32 @@ oversampling = 0;
 
 //#define i2c_read(ack) (ack) ? i2c_readAck() : i2c_readNak();
 
-void display_text(char addr, int number){
-    // Initialize the LCD display
+lcd_initialized = false;
+
+void display_init(char addr) {
     HD44780_PCF8574_Init(addr);
     HD44780_PCF8574_DisplayOn(addr);
-    HD44780_PCF8574_DisplayClear(addr);
-    HD44780_PCF8574_CursorOn(addr);
-    HD44780_PCF8574_CursorBlink(addr);
+    lcd_initialized = true;
+}
 
+void display_text(char addr, int number){
+    if(!lcd_initialized) {
+        display_init(addr);
+    }
+    HD44780_PCF8574_DisplayClear(addr);
+    //HD44780_PCF8574_CursorOn(addr);
+    //HD44780_PCF8574_CursorBlink(addr);
+
+    // Separate the first two digits and the last two digits
+    int first_two = number / 100;
+    int last_two = number % 100;
+
+    HD44780_PCF8574_DrawString(addr, "Temperatur:");
+    HD44780_PCF8574_PositionXY(addr, 0, 1);
     char number_str[16];
-    sprintf(number_str, "%d", number);
+    sprintf(number_str, "%d.%02d C", first_two, last_two);
     HD44780_PCF8574_DrawString(addr, number_str);
+    
 }
 
 
@@ -143,6 +159,20 @@ void blinki_blink(){
         PORTB &= ~(1 << PORTB5);
     }
 }
+
+/*************************************************************************
+ Read one byte from the I2C device, request more data from device 
+ 
+ Return:  byte read from I2C device
+*************************************************************************/
+unsigned char i2c_readAck(void)
+{
+	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
+	while(!(TWCR & (1<<TWINT)));    
+
+    return TWDR;
+
+}/* i2c_readAck */
 
 void i2c_start_wait(unsigned char address)
 {
@@ -321,34 +351,34 @@ int main(void) {
     i2c_initialize();
 
 
+        
+
     for (;;) {
-        // Request temperature reading
+        // Start Temperature reading
         i2c_start_wait(BMP180_ADDRESS_WRITE);
         i2c_write(BMP180_CONTROL);
         i2c_write(BMP180_READTEMPCMD);
         i2c_stop();
 
-        // Read MSB and LSB
+        //Request Temperature value
         i2c_start_wait(BMP180_ADDRESS_WRITE);
         i2c_write(BMP180_TEMPDATA_ADRESS);
         i2c_stop();
 
+        //Read Temperature split into MSB and LSB
         i2c_start_wait(BMP180_ADDRESS_READ);
-        MSB = i2c_readNak();
+        MSB = i2c_readAck();
         LSB = i2c_readNak();
         i2c_stop();
 
         // Combine MSB and LSB into a 16-bit value
         combinedValue = (uint16_t)MSB << 8 | LSB;
         int32_t tempVal = computeB5(combinedValue);
-
-        _delay_ms(200);
-        // Assuming display_text expects strings, convert numerical values to strings
-       // display_text(LCD_ADDRESS, MSB);
-        //_delay_ms(2000);
-        //display_text(LCD_ADDRESS, LSB);
-        //_delay_ms(2000);
+      
         display_text(LCD_ADDRESS, tempVal);
+        
+        //Keep the display readable by limiting temp updates to every 200ms
+        _delay_ms(250);
     }
 
     return 0;
