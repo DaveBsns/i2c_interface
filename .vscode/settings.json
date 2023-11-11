@@ -2,6 +2,7 @@
     "cmake.configureOnOpen": false,
     "files.associations": {
         "hd44780pcf8574.h": "c",
-        "i2cmaster.h": "c"
+        "i2cmaster.h": "c",
+        "twi.h": "c"
     }
 }
