@@ -80,7 +80,7 @@ void display_text(char addr, int number){
     HD44780_PCF8574_DrawString(addr, "Temperature:");
     HD44780_PCF8574_PositionXY(addr, 0, 1);
     char number_str[16];
-    sprintf(number_str, "%d.%d0 C", first_two, last_two);
+    sprintf(number_str, "%d.%0d0 C", first_two, last_two);
     HD44780_PCF8574_DrawString(addr, number_str);
 }
 
