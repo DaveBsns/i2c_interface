@@ -127,7 +127,7 @@ uint16_t bmp180_get_ut(){
     _delay_ms(5);                                 
 
     //Read Temperature split into MSB and LSB
-    i2c_start_wait(BMP180_ADDRESS_READ);        // Start 1->0 || module adress 0x77 = 1110111 || + Read Bit (1) = 0xEE = 11101111 || + Acknowledge Bit (0) = 111011100
+    i2c_start_wait(BMP180_ADDRESS_READ);        // Start 1->0 || module adress 0x77 = 1110111 || + Read Bit (1) = 0xEF = 11101111 || + Acknowledge Bit (0) = 111011110
     MSB = i2c_readAck();                        // response || + Acknowledge Master (0)
     LSB = i2c_readNak();                        // response || + Not Acknowledge Master (1)
     i2c_stop();                                 // Stop 0->1
