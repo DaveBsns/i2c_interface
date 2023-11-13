@@ -94,14 +94,14 @@ uint16_t bmp180_get_cal_param(char addr){
     //Request Calibration value register
     i2c_start_wait(BMP180_ADDRESS_WRITE);       // module adress 0x77 = 1110111 || + Write Bit (0) = 0xEE = 11101110 || + Acknowledge Bit (0) = 111011100
     i2c_write(addr);                            // Register of the calibration value to read
-    i2c_stop();                                 // Stop Bit (1)
+    i2c_stop();                                 // Stop 0->1
     _delay_ms(5);
 
     //Read calibration value split into MSB and LSB
     i2c_start_wait(BMP180_ADDRESS_READ);        // module adress 0x77 = 1110111 || + Read Bit (1) = 0xEE = 11101111 || + Acknowledge Bit (0) = 111011100
     MSB = i2c_readAck();                        // response || + Acknowledge Master (0)
     LSB = i2c_readNak();                        // response || + Not Acknowledge Master (1)
-    i2c_stop();                                 // Stop Bit (1)
+    i2c_stop();                                 // Stop 0->1
 
     //Put the 16 bit value together using 8 bit MSB and 8 bit LSB in their correct place.
     combinedValue = (uint16_t)MSB << 8 | LSB;
@@ -115,22 +115,22 @@ uint16_t bmp180_get_ut(){
     uint16_t ut;
 
     // Start Temperature reading
-    i2c_start_wait(BMP180_ADDRESS_WRITE);       // module adress 0x77 = 1110111 || + Write Bit (0) = 0xEE = 11101110 || + Acknowledge Bit (0) = 111011100
+    i2c_start_wait(BMP180_ADDRESS_WRITE);       // Start 1->0 || module adress 0x77 = 1110111 || + Write Bit (0) = 0xEE = 11101110 || + Acknowledge Bit (0) = 111011100
     i2c_write(BMP180_CONTROL);                  // control register adress 0xF4 = 11110100 || + Acknowledge Bit (0) = 111101000              
     i2c_write(BMP180_READTEMPCMD);              // Temperature Read Command Register 0x2E = 00101110 || + Acknowledge Bit (0) = 001011100       
-    i2c_stop();                                 // Stop Bit (1)
+    i2c_stop();                                 // Stop 0->1
 
     //Request Temperature value
-    i2c_start_wait(BMP180_ADDRESS_WRITE);       // module adress 0x77 = 1110111 || + Write Bit (0) = 0xEE = 11101110 || + Acknowledge Bit (0) = 111011100
+    i2c_start_wait(BMP180_ADDRESS_WRITE);       // Start 1->0 || module adress 0x77 = 1110111 || + Write Bit (0) = 0xEE = 11101110 || + Acknowledge Bit (0) = 111011100
     i2c_write(BMP180_TEMPDATA_ADRESS);          // Temperature Data Register 0xF6 = 11110110 || + Acknowledge Bit (0) = 111101100
-    i2c_stop();                                 // Stop Bit (1)
+    i2c_stop();                                 // Stop 0->1
     _delay_ms(5);                                 
 
     //Read Temperature split into MSB and LSB
-    i2c_start_wait(BMP180_ADDRESS_READ);        // module adress 0x77 = 1110111 || + Read Bit (1) = 0xEE = 11101111 || + Acknowledge Bit (0) = 111011100
+    i2c_start_wait(BMP180_ADDRESS_READ);        // Start 1->0 || module adress 0x77 = 1110111 || + Read Bit (1) = 0xEE = 11101111 || + Acknowledge Bit (0) = 111011100
     MSB = i2c_readAck();                        // response || + Acknowledge Master (0)
     LSB = i2c_readNak();                        // response || + Not Acknowledge Master (1)
-    i2c_stop();                                 // Stop Bit (1)
+    i2c_stop();                                 // Stop 0->1
     
     // Combine MSB and LSB into a 16-bit value
     ut = (uint16_t)MSB << 8 | LSB;
