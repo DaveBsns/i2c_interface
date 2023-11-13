@@ -49,9 +49,11 @@ unsigned char i2c_start(unsigned char address)
 	// check value of TWI Status Register. Mask prescaler bits.
 	twst = TW_STATUS & 0xF8;
     
-	if ( (twst != TW_MT_SLA_ACK) && (twst != TW_MR_SLA_ACK) ) return 1;
+	// return NACK
+	if ( (twst != TW_MT_SLA_ACK) && (twst != TW_MR_SLA_ACK) ) return 1; 
 
-	return 0;
+	// return ACK
+	return 0; 
 }
 
 /*************************************************************************
@@ -133,7 +135,6 @@ unsigned char i2c_write( unsigned char data )
 	twst = TW_STATUS & 0xF8;
     
 	if( twst != TW_MT_DATA_ACK) return 1;
-    //blinki_blink();
     
 	return 0;
 
@@ -175,7 +176,7 @@ unsigned char i2c_rep_start(unsigned char address)
 unsigned char i2c_readNak(void)
 {
 	TWCR = (1<<TWINT) | (1<<TWEN);
-    // blinki_blink();
+
 	while(!(TWCR & (1<<TWINT)));
 	
     return TWDR;
