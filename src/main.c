@@ -70,15 +70,17 @@ void display_text(char addr, int number){
         display_init(addr);
     }
     HD44780_PCF8574_DisplayClear(addr);
-    //HD44780_PCF8574_CursorOn(addr);
-    //HD44780_PCF8574_CursorBlink(addr);
 
     // Separate the first two digits and the last two digits
     int first_two = number / 10;
     int last_two = (number % 100) % 10;
 
+    //Display description in the first row
     HD44780_PCF8574_DrawString(addr, "Temperature:");
+    //Go to second row
     HD44780_PCF8574_PositionXY(addr, 0, 1);
+
+    //Display the numbers in correct formatting
     char number_str[16];
     sprintf(number_str, "%d.%0d0 C", first_two, last_two);
     HD44780_PCF8574_DrawString(addr, number_str);
@@ -101,6 +103,7 @@ uint16_t bmp180_get_cal_param(char addr){
     LSB = i2c_readNak();                        // response || + Not Acknowledge Master (1)
     i2c_stop();                                 // Stop Bit (1)
 
+    //Put the 16 bit value together using 8 bit MSB and 8 bit LSB in their correct place.
     combinedValue = (uint16_t)MSB << 8 | LSB;
 
     return combinedValue;
@@ -121,8 +124,8 @@ uint16_t bmp180_get_ut(){
     i2c_start_wait(BMP180_ADDRESS_WRITE);       // module adress 0x77 = 1110111 || + Write Bit (0) = 0xEE = 11101110 || + Acknowledge Bit (0) = 111011100
     i2c_write(BMP180_TEMPDATA_ADRESS);          // Temperature Data Register 0xF6 = 11110110 || + Acknowledge Bit (0) = 111101100
     i2c_stop();                                 // Stop Bit (1)
-    _delay_ms(5); 
-                                    
+    _delay_ms(5);                                 
+
     //Read Temperature split into MSB and LSB
     i2c_start_wait(BMP180_ADDRESS_READ);        // module adress 0x77 = 1110111 || + Read Bit (1) = 0xEE = 11101111 || + Acknowledge Bit (0) = 111011100
     MSB = i2c_readAck();                        // response || + Acknowledge Master (0)
@@ -135,15 +138,19 @@ uint16_t bmp180_get_ut(){
     return ut;
 }
 
+//Compute the Temperature values based on the formula in the data sheet.
 int32_t computeB5(int32_t UT) {
-  int32_t X1 = (UT - (int32_t)ac6) * ((int32_t)ac5) >> 15;
-  int32_t X2 = ((int32_t)mc << 11) / (X1 + (int32_t)md);
-  return X1 + X2;
+    int32_t X1 = (UT - (int32_t)ac6) * ((int32_t)ac5) >> 15;
+    int32_t X2 = ((int32_t)mc << 11) / (X1 + (int32_t)md);
+    int32_t ret = ((X1 + X2) + 8) / (1 << 4);
+    return ret;
 }
 
 int main(void) {
-    for(;;) {
-    i2c_initialize();  
+    //Set the I²C Clock frequency
+    i2c_initialize();
+
+    //Retrieve all calibration parameters required for temperature calculation
     ac1 = bmp180_get_cal_param(AC1_ADRESS);
     ac2 = bmp180_get_cal_param(AC2_ADRESS);
     ac3 = bmp180_get_cal_param(AC3_ADRESS);
@@ -155,15 +162,26 @@ int main(void) {
     mb = bmp180_get_cal_param(MB_ADRESS);
     mc = bmp180_get_cal_param(MC_ADRESS);
     md = bmp180_get_cal_param(MD_ADRESS);
-    ut = bmp180_get_ut();
-    int32_t rawTemp = computeB5(ut);
-    int32_t temperature = (rawTemp + 8) / (1 << 4);
-    display_text(LCD_ADDRESS, temperature);
-    _delay_ms(500);
+
+    //Update the Temperature every 500 ms.
+    for(;;) {
+        //Retrieve the raw temperature value from the device
+        ut = bmp180_get_ut();
+
+        //Calculate the temperature using the calibration data
+        int32_t temperature = computeB5(ut);
+
+        //Display the temperature on the LCD
+        display_text(LCD_ADDRESS, temperature);
+
+        //Wait with updating for half a second to keep it readable.
+        //Can be replaced with more sophisticated non-blocking timer
+        _delay_ms(500);
     }
     return 0;
 }
 
+//LED-Debug function we used to see if a certain point in the code is reached.
 void blinki_blink(){
     DDRB |= (1<< DDB5);
     while(1){
