@@ -3,17 +3,19 @@
 #include <lib/hd44780pcf8574.h>
 #include <compat/twi.h>
 
-#define F_CPU 4000000UL
+#define F_CPU 4000000UL //Set to 4.000.000 Hz or 4 Mhz
 
 /* I2C clock in Hz */
-#define SCL_CLOCK  100000L
+#define SCL_CLOCK  100000L //Set to 100.000 Hz or 100 kHz
 
 
 void i2c_initialize(void)
 {
   /* initialize TWI clock: 100 kHz clock, TWPS = 0 => prescaler = 1 */
-  TWSR = 0;                         /* no prescaler */
-  TWBR = ((F_CPU/SCL_CLOCK)-16)/2;  /* must be > 10 for stable operation */
+  TWSR = 0;                         // no prescaler - clock is not divided before its being used
+  TWBR = ((F_CPU/SCL_CLOCK)-16)/2;  // must be > 10 for stable operation - First 16 clock cycles reserved for adressing
+									// TWBR(TWI Bit Rate Register) set the bitrate for the i2c communication 
+									// based on the system clock frequency for stabe operations
 }
 
 
@@ -33,7 +35,8 @@ unsigned char i2c_start(unsigned char address)
                                                 // TWEN = TWI Enable Bit
 
 	// wait until transmission completed
-	while(!(TWCR & (1<<TWINT)));
+	while(!(TWCR & (1<<TWINT))); // TWCR = Two-Wire Control Register
+                                 // TWINT = TWI Interrupt Flag
 
 	// check value of TWI Status Register. Mask prescaler bits.
 	twst = TW_STATUS & 0xF8;
@@ -41,7 +44,8 @@ unsigned char i2c_start(unsigned char address)
 
 	// send device address
 	TWDR = address;
-	TWCR = (1<<TWINT) | (1<<TWEN);
+	TWCR = (1<<TWINT) | (1<<TWEN); // sets TWI interupt flag bit in the control register
+								   // sets the TWI enable bit -> allowing to start or continue this operation
 
 	// wail until transmission completed and ACK/NACK has been received
 	while(!(TWCR & (1<<TWINT)));
@@ -63,10 +67,13 @@ unsigned char i2c_start(unsigned char address)
 *************************************************************************/
 unsigned char i2c_readAck(void)
 {
-	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
+	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA); // sets TWI interupt flag bit in the control register
+											   // sets the TWI enable bit -> allowing to start or continue this operation
+											   // TWI Enable Acknowledge Bit - generation of an acknowledgement
+
 	while(!(TWCR & (1<<TWINT)));    
 
-    return TWDR;
+    return TWDR; // Returning value stored in the Two Wire Data Register
 
 }/* i2c_readAck */
 
@@ -90,7 +97,8 @@ void i2c_start_wait(unsigned char address)
     
     	// send device address
     	TWDR = address;
-    	TWCR = (1<<TWINT) | (1<<TWEN);
+    	TWCR = (1<<TWINT) | (1<<TWEN); // sets TWI interupt flag bit in the control register
+								   	   // sets the TWI enable bit -> allowing to start or continue this operation
     
     	// wail until transmission completed
     	while(!(TWCR & (1<<TWINT)));
@@ -126,7 +134,8 @@ unsigned char i2c_write( unsigned char data )
     
 	// send data to the previously addressed device
 	TWDR = data;
-	TWCR = (1<<TWINT) | (1<<TWEN);
+	TWCR = (1<<TWINT) | (1<<TWEN); // sets TWI interupt flag bit in the control register
+								   // sets the TWI enable bit -> allowing to start or continue this operation
 
 	// wait until transmission completed
 	while(!(TWCR & (1<<TWINT)));
@@ -134,8 +143,10 @@ unsigned char i2c_write( unsigned char data )
 	// check value of TWI Status Register. Mask prescaler bits
 	twst = TW_STATUS & 0xF8;
     
+	// return NACK
 	if( twst != TW_MT_DATA_ACK) return 1;
     
+	// returns ACK
 	return 0;
 
 }/* i2c_write */
@@ -146,7 +157,9 @@ unsigned char i2c_write( unsigned char data )
 void i2c_stop(void)
 {
     /* send stop condition */
-	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
+	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO); // sets TWI interupt flag bit in the control register
+								   				// sets the TWI enable bit -> allowing to start or continue this operation
+								   				// setting the TWI stop bit -> terminates a TWI communication session
 	
 	// wait until stop condition is executed and bus released
 	while(TWCR & (1<<TWSTO));
@@ -175,7 +188,8 @@ unsigned char i2c_rep_start(unsigned char address)
 *************************************************************************/
 unsigned char i2c_readNak(void)
 {
-	TWCR = (1<<TWINT) | (1<<TWEN);
+	TWCR = (1<<TWINT) | (1<<TWEN); // sets TWI interupt flag bit in the control register
+								   // sets the TWI enable bit -> allowing to start or continue this operation
 
 	while(!(TWCR & (1<<TWINT)));
 	
